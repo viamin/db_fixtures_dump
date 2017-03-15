@@ -20,6 +20,8 @@ namespace :db do
       dump_dir = ENV['FIXTURES_PATH'] || 'spec/fixtures/'
       excludes = []
       excludes = ENV['EXCLUDE_MODELS'].split(' ') if ENV['EXCLUDE_MODELS']
+      excluded_columns = []
+      excluded_columns = ENV['EXCLUDE_COLUMNS'].split(' ') if ENV['EXCLUDE_COLUMNS']
       includes = models
       includes = ENV['INCLUDE_MODELS'].split(' ') if ENV['INCLUDE_MODELS']
       puts 'Found models: ' + models.join(', ')
@@ -33,7 +35,7 @@ namespace :db do
         model = m.constantize
         next unless model.ancestors.include?(ActiveRecord::Base)
 
-        entries = model.unscoped.all.order('id ASC')
+        records = model.unscoped.all.order('id ASC')
         puts "Dumping model: #{m} (#{entries.length} entries)"
 
         increment = 1
@@ -42,9 +44,10 @@ namespace :db do
         # model_file = File.join(Rails.root, dump_dir, m.underscore.pluralize + '.yml')
         model_file = Rails.root.join(dump_dir, m.underscore.pluralize + '.yml')
         output = {}
-        entries.each do |a|
-          attrs = a.attributes
-          attrs.delete_if { |k,v| v.nil? }
+        records.each do |record|
+          attrs = record.attributes
+          attrs.delete_if { |_k, v| v.nil? }
+          attrs.delete_if { |k, _v| excluded_columns.include? k }
 
           output["#{m}_#{increment}"] = attrs
 
